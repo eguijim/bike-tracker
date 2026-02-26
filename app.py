@@ -70,25 +70,11 @@ with st.sidebar:
                 st.subheader('Dirección no válida')
 
 # ---- CITY MAP ----
-center_coordinates = [41.3874, 2.1686]
-city_map = folium.Map(location=center_coordinates, zoom_start=13, tiles='cartodbpositron')
+if option == 'Alquilar' and find_bikes_button == False:
+    show_initial_map(data)
 
-# Add circle markers to represent each station
-for _, row in data.iterrows():
-    marker_color = get_marker_color(row['num_bikes_available']) 
-    folium.CircleMarker(
-        location=[row['lat'], row['lon']],
-        radius=2,
-        color=marker_color,
-        fill=True,
-        fill_color=marker_color,
-        fill_opacity=0.7,
-        popup=folium.Popup(f"Estación ID: {row['station_id']}<br>"
-                               f"Total Bicicletas Disponibles: {row['num_bikes_available']}<br>")
-    ).add_to(city_map)
-
-# Display the map 
-folium_static(city_map)
+if option == 'Devolver' and find_docks_button == False:
+    show_initial_map(data)
 
 # ---- SHOW USER INPUT RESULTS ----
 
