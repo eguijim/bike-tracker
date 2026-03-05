@@ -114,7 +114,7 @@ def run_osrm(chosen_station, actual_location):
     end = "{},{}".format(chosen_station[2], chosen_station[1]) 
 
     # Create the OSRM API URL
-    url = 'http://router.project-osrm.org/route/v1/driving/{};{}?geometries=geojson'.format(start, end)  
+    url = 'http://routing.openstreetmap.de/routed-foot/route/v1/driving/{};{}?geometries=geojson'.format(start, end)
 
     # Make the API request
     headers = {'Content-type': 'application/json'}
@@ -153,3 +153,61 @@ def show_map(df):
 
     # Display the map 
     folium_static(city_map)
+
+# Function that show the route for getting or leaving a bike
+def show_nearest_location(data, option, find_button, street, city, country, col3, bike_type):
+    if find_button:
+        if street != "":
+            current_location = geocode(street + " " + city + " " + country)
+            if current_location != "":
+                if option == 'Devolver':
+                    selected_station = get_dock_availability(current_location, data)
+                else:
+                    selected_station = get_bike_availability(current_location, data, bike_type)
+                center = current_location
+                m1 = folium.Map(location=center, zoom_start=16, tiles='cartodbpositron')
+                for _, row in data.iterrows():
+                    marker_color = get_marker_color(row['num_bikes_available']) 
+                    folium.CircleMarker(
+                        location=[row['lat'], row['lon']],
+                        radius=2,
+                        color=marker_color,
+                        fill=True,
+                        fill_color=marker_color,
+                        fill_opacity=0.7,
+                        popup=folium.Popup(f"Estación ID: {row['station_id']}<br>"
+                                            f"Total Bicicletas Disponibles: {row['num_bikes_available']}<br>")
+                    ).add_to(m1)
+                folium.Marker(
+                    location=current_location,
+                    popup="Estás aquí.",
+                    icon=folium.Icon(color='blue', icon='person', prefix='fa')
+                ).add_to(m1)
+
+                # Popup text and icon
+                if option == 'Devolver':
+                    popup_text = "Deja tu bicicleta aquí."
+                    map_icon = folium.Icon(color='red', icon='home', prefix='fa')
+                else:
+                    popup_text = "Bicicleta disponible aquí."
+                    map_icon = folium.Icon(color='red', icon='bicycle', prefix='fa')
+                folium.Marker(
+                    location = (selected_station[1], selected_station[2]),
+                    popup=popup_text,
+                    icon=map_icon
+                ).add_to(m1)
+                    
+                coordinates, duration = run_osrm(selected_station, current_location)
+                print(coordinates)
+
+                folium.PolyLine(
+                    locations=coordinates,
+                    color='blue',
+                    weight=5,
+                    tooltip="te tomará {} para llegar aquí.".format(duration),
+                ).add_to(m1)
+
+                # Display the map
+                folium_static(m1)
+                with col3: 
+                    st.metric(label="Tiempo Estimado (min)", value=duration)    
