@@ -25,6 +25,7 @@ with col2:
     st.metric(label='Estaciones con Espacios Disponibles', value = len(data[data['num_docks_available'] > 0]))
 
 # ---- SIDEBAR ----
+bike_type = []
 with st.sidebar:
     option = st.selectbox(
         '¿Quieres alquilar o devolver una bicicleta?',

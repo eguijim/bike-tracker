@@ -72,25 +72,26 @@ def geocode(address):
 # Function to get bike availability near a location calculating distances
 def get_bike_availability(latlon, df, input_bike_modes):
     if len(input_bike_modes) == 0 or len(input_bike_modes) == 4:  # If no mode selected, assume all bikes are selected
-        i = 0
-        df['distance'] = ''
-        while i < len(df):
-            df.loc[i, 'distance'] = geodesic(latlon, (df['lat'][i], df['lon'][i])).km  # Calculate distance to each station
-            i = i + 1
-        chosen_station = []
-        chosen_station.append(df[df['distance'] == min(df['distance'])]['station_id'].iloc[0])  # Get closest station
-        chosen_station.append(df[df['distance'] == min(df['distance'])]['lat'].iloc[0])
-        chosen_station.append(df[df['distance'] == min(df['distance'])]['lon'].iloc[0])
+        df = df.loc[df['num_bikes_available'] > 0].reset_index(drop=True) # Should be at least one bike
     else:
-        i = 0
-        df['distance'] = ''
-        while i < len(df):
-            df.loc[i, 'distance'] = geodesic(latlon, (df['lat'][i], df['lon'][i])).km  
-            i = i + 1
-        chosen_station = []
-        chosen_station.append(df[df['distance'] == min(df['distance'])]['station_id'].iloc[0]) 
-        chosen_station.append(df[df['distance'] == min(df['distance'])]['lat'].iloc[0])
-        chosen_station.append(df[df['distance'] == min(df['distance'])]['lon'].iloc[0])
+        # Select only the stations with the type/s of bike selected
+        valid_modes = [m for m in input_bike_modes if m in df.columns]
+        df = df.loc[df[valid_modes].sum(axis=1) > 0].reset_index(drop=True)
+
+    # In case there is no bikes from the type selected
+    if len(df) == 0:
+        return []
+        
+    i = 0
+    df['distance'] = ''
+    while i < len(df):
+        df.loc[i, 'distance'] = geodesic(latlon, (df['lat'][i], df['lon'][i])).km  # Calculate distance to each station
+        i = i + 1
+    chosen_station = []
+    chosen_station.append(df[df['distance'] == min(df['distance'])]['station_id'].iloc[0])  # Get closest station
+    chosen_station.append(df[df['distance'] == min(df['distance'])]['lat'].iloc[0])
+    chosen_station.append(df[df['distance'] == min(df['distance'])]['lon'].iloc[0])
+    
     return chosen_station  
 
 # Function to get dock availability near a location
@@ -164,50 +165,54 @@ def show_nearest_location(data, option, find_button, street, city, country, col3
                     selected_station = get_dock_availability(current_location, data)
                 else:
                     selected_station = get_bike_availability(current_location, data, bike_type)
-                center = current_location
-                m1 = folium.Map(location=center, zoom_start=16, tiles='cartodbpositron')
-                for _, row in data.iterrows():
-                    marker_color = get_marker_color(row['num_bikes_available']) 
-                    folium.CircleMarker(
-                        location=[row['lat'], row['lon']],
-                        radius=2,
-                        color=marker_color,
-                        fill=True,
-                        fill_color=marker_color,
-                        fill_opacity=0.7,
-                        popup=folium.Popup(f"Estación ID: {row['station_id']}<br>"
-                                            f"Total Bicicletas Disponibles: {row['num_bikes_available']}<br>")
-                    ).add_to(m1)
-                folium.Marker(
-                    location=current_location,
-                    popup="Estás aquí.",
-                    icon=folium.Icon(color='blue', icon='person', prefix='fa')
-                ).add_to(m1)
-
-                # Popup text and icon
-                if option == 'Devolver':
-                    popup_text = "Deja tu bicicleta aquí."
-                    map_icon = folium.Icon(color='red', icon='home', prefix='fa')
+    
+                if not selected_station: # Check if there is any bike of the type/s selected in the stations
+                    st.warning(f"Lo sentimos, ahora mismo no hay ninguna bicicleta del tipo {bike_type} disponible.")
                 else:
-                    popup_text = "Bicicleta disponible aquí."
-                    map_icon = folium.Icon(color='red', icon='bicycle', prefix='fa')
-                folium.Marker(
-                    location = (selected_station[1], selected_station[2]),
-                    popup=popup_text,
-                    icon=map_icon
-                ).add_to(m1)
-                    
-                coordinates, duration = run_osrm(selected_station, current_location)
-                print(coordinates)
+                    center = current_location
+                    m1 = folium.Map(location=center, zoom_start=16, tiles='cartodbpositron')
+                    for _, row in data.iterrows():
+                        marker_color = get_marker_color(row['num_bikes_available']) 
+                        folium.CircleMarker(
+                            location=[row['lat'], row['lon']],
+                            radius=2,
+                            color=marker_color,
+                            fill=True,
+                            fill_color=marker_color,
+                            fill_opacity=0.7,
+                            popup=folium.Popup(f"Estación ID: {row['station_id']}<br>"
+                                                f"Total Bicicletas Disponibles: {row['num_bikes_available']}<br>")
+                        ).add_to(m1)
+                    folium.Marker(
+                        location=current_location,
+                        popup="Estás aquí.",
+                        icon=folium.Icon(color='blue', icon='person', prefix='fa')
+                    ).add_to(m1)
 
-                folium.PolyLine(
-                    locations=coordinates,
-                    color='blue',
-                    weight=5,
-                    tooltip="te tomará {} para llegar aquí.".format(duration),
-                ).add_to(m1)
+                    # Popup text and icon
+                    if option == 'Devolver':
+                        popup_text = "Deja tu bicicleta aquí."
+                        map_icon = folium.Icon(color='red', icon='home', prefix='fa')
+                    else:
+                        popup_text = "Bicicleta disponible aquí."
+                        map_icon = folium.Icon(color='red', icon='bicycle', prefix='fa')
+                    folium.Marker(
+                        location = (selected_station[1], selected_station[2]),
+                        popup=popup_text,
+                        icon=map_icon
+                    ).add_to(m1)
+                        
+                    coordinates, duration = run_osrm(selected_station, current_location)
+                    print(coordinates)
 
-                # Display the map
-                folium_static(m1)
-                with col3: 
-                    st.metric(label="Tiempo Estimado (min)", value=duration)    
+                    folium.PolyLine(
+                        locations=coordinates,
+                        color='blue',
+                        weight=5,
+                        tooltip="te tomará {} para llegar aquí.".format(duration),
+                    ).add_to(m1)
+
+                    # Display the map
+                    folium_static(m1)
+                    with col3: 
+                        st.metric(label="Tiempo Estimado (min)", value=duration)    
