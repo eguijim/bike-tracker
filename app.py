@@ -62,10 +62,8 @@ with st.sidebar:
         street = st.text_input('Calle')
         city = st.text_input('Ciudad', 'Barcelona')
         country = st.text_input('País', 'España')
-        transport_mode = st.selectbox(
-        '¿Cómo te vas a desplazar?',
-        ['A pie', 'En coche', 'En bici']
-        )
+        transport_mode = ['En bici'] # Suppose that the user will go on the rented bike
+        drive_selected = False
         # FIND DOCKS BUTTON
         find_docks_button = st.button('Buscar espacios', type='primary')
         if find_docks_button:
