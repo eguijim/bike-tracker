@@ -91,7 +91,7 @@ def get_bike_availability(latlon, df, input_bike_modes):
     chosen_station.append(df[df['distance'] == min(df['distance'])]['station_id'].iloc[0])  # Get closest station
     chosen_station.append(df[df['distance'] == min(df['distance'])]['lat'].iloc[0])
     chosen_station.append(df[df['distance'] == min(df['distance'])]['lon'].iloc[0])
-    
+
     return chosen_station  
 
 # Function to get dock availability near a location
@@ -109,14 +109,19 @@ def get_dock_availability(latlon, df):
     return chosen_station 
 
 # Function to run OSRM and get route coordinates and duration
-def run_osrm(chosen_station, actual_location):
+def run_osrm(chosen_station, actual_location, transport_mode):
     # Format the coordinates
     start = "{},{}".format(actual_location[1], actual_location[0])  
     end = "{},{}".format(chosen_station[2], chosen_station[1]) 
 
-    # Create the OSRM API URL
-    url = 'http://routing.openstreetmap.de/routed-foot/route/v1/driving/{};{}?geometries=geojson'.format(start, end)
-
+    # Create the OSRM API URL depending on the transport mode
+    if transport_mode == 'En coche':
+        url = 'http://router.project-osrm.org/route/v1/driving/{};{}?geometries=geojson'.format(start, end)
+    elif transport_mode == 'En bici':
+        url = 'http://routing.openstreetmap.de/routed-bike/route/v1/driving/{};{}?geometries=geojson'.format(start, end)
+    else: 
+        url = 'http://routing.openstreetmap.de/routed-foot/route/v1/driving/{};{}?geometries=geojson'.format(start, end)
+    
     # Make the API request
     headers = {'Content-type': 'application/json'}
     r = requests.get(url, headers=headers)  
@@ -156,7 +161,7 @@ def show_map(df):
     folium_static(city_map)
 
 # Function that show the route for getting or leaving a bike
-def show_nearest_location(data, option, find_button, street, city, country, col3, bike_type):
+def show_nearest_location(data, option, find_button, street, city, country, col3, bike_type, transport_mode, drive_selected):
     if find_button:
         if street != "":
             current_location = geocode(street + " " + city + " " + country)
@@ -169,6 +174,14 @@ def show_nearest_location(data, option, find_button, street, city, country, col3
                 if not selected_station: # Check if there is any bike of the type/s selected in the stations
                     st.warning(f"Lo sentimos, ahora mismo no hay ninguna bicicleta del tipo {bike_type} disponible.")
                 else:
+                    # 'Too many bikes' alert on rent option
+                    if option == 'Alquilar' and drive_selected:
+                        station_id = selected_station[0]
+                        bikes_left = data[data['station_id'] == station_id]['num_bikes_available'].values[0]
+                        if bikes_left <= 3:
+                            st.warning(f"**Disponibilidad baja:** Te diriges a esta estación pero solo quedan **{bikes_left} bicicletas**. Es posible que se agoten antes de que llegues.")
+                        else:
+                            st.success(f"**Disponibilidad alta:** La estación encontrada cuenta con un total de **{bikes_left} bicicletas** disponibles.")
                     center = current_location
                     m1 = folium.Map(location=center, zoom_start=16, tiles='cartodbpositron')
                     for _, row in data.iterrows():
@@ -202,7 +215,7 @@ def show_nearest_location(data, option, find_button, street, city, country, col3
                         icon=map_icon
                     ).add_to(m1)
                         
-                    coordinates, duration = run_osrm(selected_station, current_location)
+                    coordinates, duration = run_osrm(selected_station, current_location, transport_mode)
                     print(coordinates)
 
                     folium.PolyLine(

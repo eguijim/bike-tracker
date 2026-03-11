@@ -42,8 +42,11 @@ with st.sidebar:
         street = st.text_input('Calle')
         city = st.text_input('Ciudad', 'Barcelona')
         country = st.text_input('País', 'España')
+        transport_mode = st.selectbox(
+        '¿Cómo te vas a desplazar?',
+        ['A pie', 'En coche', 'En bici']
+        )
         drive_selected = st.checkbox('Me dirijo hacia allí')
-
         # FIND BIKES BUTTON
         find_bikes_button = st.button('Buscar bicicletas', type='primary')
         if find_bikes_button:
@@ -59,7 +62,10 @@ with st.sidebar:
         street = st.text_input('Calle')
         city = st.text_input('Ciudad', 'Barcelona')
         country = st.text_input('País', 'España')
-
+        transport_mode = st.selectbox(
+        '¿Cómo te vas a desplazar?',
+        ['A pie', 'En coche', 'En bici']
+        )
         # FIND DOCKS BUTTON
         find_docks_button = st.button('Buscar espacios', type='primary')
         if find_docks_button:
@@ -81,8 +87,8 @@ if option == 'Devolver' and find_docks_button == False:
 
 # "Alquilar" Option Map (Bikes)
 if option == 'Alquilar':
-    show_nearest_location(data, option, find_bikes_button, street, city, country, col3, bike_type)
+    show_nearest_location(data, option, find_bikes_button, street, city, country, col3, bike_type, transport_mode, drive_selected)
 # "Devolver" Option Map (Docks)
 if option == 'Devolver':
-    show_nearest_location(data, option, find_docks_button, street, city, country, col3, bike_type)
+    show_nearest_location(data, option, find_docks_button, street, city, country, col3, bike_type, transport_mode, drive_selected)
     
