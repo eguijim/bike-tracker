@@ -56,7 +56,10 @@ Si en vez de Anaconda prefieres usar un entorno virtual estándar de Python, nec
     python3 -m venv venv
     source venv/bin/activate
     ```
-
+2. Instala las dependencias del proyecto:
+    ```bash
+    pip install -r requirements.txt
+    ```  
 ## Ejecución de la Aplicación
 Una vez hayas activado el entorno, ya puedes iniciar y utilizar la aplicación con Streamlit usando el siguiente comando:
 ```bash
